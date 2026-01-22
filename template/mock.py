@@ -58,6 +58,8 @@ class MockDendrite(bt.dendrite):
 
     def __init__(self, wallet):
         super().__init__(wallet)
+        self.min_time = 0.0
+        self.max_time = 1.0
 
     async def forward(
         self,
@@ -68,34 +70,56 @@ class MockDendrite(bt.dendrite):
         run_async: bool = True,
         streaming: bool = False,
     ):
+        """
+        Mock forward method that simulates network requests with configurable timing.
+        
+        Args:
+            axons: List of axons to query
+            synapse: The synapse object containing request data
+            timeout: Maximum time to wait for responses
+            deserialize: Whether to deserialize responses
+            run_async: Whether to run asynchronously
+            streaming: Whether to use streaming (not implemented)
+            
+        Returns:
+            List of response synapses
+        """
         if streaming:
             raise NotImplementedError("Streaming not implemented yet.")
 
-        async def query_all_axons(streaming: bool):
+        async def query_all_axons():
             """Queries all axons for responses."""
 
             async def single_axon_response(i, axon):
                 """Queries a single axon for a response."""
-
                 start_time = time.time()
                 s = synapse.copy()
+                
                 # Attach some more required data so it looks real
                 s = self.preprocess_synapse_for_request(axon, s, timeout)
-                # We just want to mock the response, so we'll just fill in some data
-                process_time = random.random()
-                if process_time < timeout:
-                    s.dendrite.process_time = str(time.time() - start_time)
-                    # Update the status code and status message of the dendrite to match the axon
-                    # TODO (developer): replace with your own expected synapse data
-                    s.dummy_output = s.dummy_input * 2
-                    s.dendrite.status_code = 200
-                    s.dendrite.status_message = "OK"
-                    synapse.dendrite.process_time = str(process_time)
-                else:
-                    s.dummy_output = 0
+                
+                # Generate random process time within configured range
+                process_time = random.uniform(self.min_time, self.max_time)
+                
+                # Simulate processing delay
+                await asyncio.sleep(process_time)
+                
+                actual_time = time.time() - start_time
+                
+                # Determine response based on timing
+                if actual_time >= timeout:
+                    s.dummy_output = s.dummy_input if hasattr(s, 'dummy_input') else 0
                     s.dendrite.status_code = 408
                     s.dendrite.status_message = "Timeout"
-                    synapse.dendrite.process_time = str(timeout)
+                    s.dendrite.process_time = str(actual_time)
+                else:
+                    # Update the status code and status message of the dendrite to match the axon
+                    # TODO (developer): replace with your own expected synapse data
+                    if hasattr(s, 'dummy_input'):
+                        s.dummy_output = s.dummy_input * 2
+                    s.dendrite.status_code = 200
+                    s.dendrite.status_message = "OK"
+                    s.dendrite.process_time = str(actual_time)
 
                 # Return the updated synapse object after deserializing if requested
                 if deserialize:
@@ -110,7 +134,29 @@ class MockDendrite(bt.dendrite):
                 )
             )
 
-        return await query_all_axons(streaming)
+        return await query_all_axons()
+
+    async def __call__(
+        self,
+        axons: List[bt.axon],
+        synapse: bt.Synapse = bt.Synapse(),
+        timeout: float = 12,
+        deserialize: bool = True,
+        run_async: bool = True,
+        streaming: bool = False,
+    ):
+        """
+        Make MockDendrite callable to match bittensor dendrite API.
+        This method delegates to forward().
+        """
+        return await self.forward(
+            axons=axons,
+            synapse=synapse,
+            timeout=timeout,
+            deserialize=deserialize,
+            run_async=run_async,
+            streaming=streaming,
+        )
 
     def __str__(self) -> str:
         """

@@ -19,6 +19,7 @@
 
 
 import copy
+import os
 import numpy as np
 import asyncio
 import argparse
@@ -169,6 +170,8 @@ class BaseValidatorNeuron(BaseNeuron):
             bt.logging.debug(
                 str(print_exception(type(err), err, err.__traceback__))
             )
+            # Re-raise to allow proper error handling
+            raise
 
     def run_in_background_thread(self):
         """
@@ -211,38 +214,36 @@ class BaseValidatorNeuron(BaseNeuron):
             traceback: A traceback object encoding the stack trace.
                        None if the context was exited without an exception.
         """
-        if self.is_running:
-            bt.logging.debug("Stopping validator in background thread.")
-            self.should_exit = True
-            self.thread.join(5)
-            self.is_running = False
-            bt.logging.debug("Stopped")
+        self.stop_run_thread()
 
     def set_weights(self):
         """
-        Sets the validator weights to the metagraph hotkeys based on the scores it has received from the miners. The weights determine the trust and incentive level the validator assigns to miner nodes on the network.
+        Sets the validator weights to the metagraph hotkeys based on the scores it has received from the miners. 
+        The weights determine the trust and incentive level the validator assigns to miner nodes on the network.
         """
-
         # Check if self.scores contains any NaN values and log a warning if it does.
         if np.isnan(self.scores).any():
             bt.logging.warning(
-                f"Scores contain NaN values. This may be due to a lack of responses from miners, or a bug in your reward functions."
+                "Scores contain NaN values. This may be due to a lack of responses from miners, "
+                "or a bug in your reward functions."
             )
+            # Replace NaN values with 0
+            self.scores = np.nan_to_num(self.scores, nan=0.0)
 
         # Calculate the average reward for each uid across non-zero values.
-        # Replace any NaN values with 0.
         # Compute the norm of the scores
-        norm = np.linalg.norm(self.scores, ord=1, axis=0, keepdims=True)
+        norm = np.linalg.norm(self.scores, ord=1)
 
         # Check if the norm is zero or contains NaN values
-        if np.any(norm == 0) or np.isnan(norm).any():
-            norm = np.ones_like(norm)  # Avoid division by zero or NaN
+        if norm == 0 or np.isnan(norm):
+            bt.logging.warning("All scores are zero or NaN. Setting uniform weights.")
+            raw_weights = np.ones_like(self.scores) / len(self.scores)
+        else:
+            # Compute raw_weights safely
+            raw_weights = self.scores / norm
 
-        # Compute raw_weights safely
-        raw_weights = self.scores / norm
-
-        bt.logging.debug("raw_weights", raw_weights)
-        bt.logging.debug("raw_weight_uids", str(self.metagraph.uids.tolist()))
+        bt.logging.debug(f"raw_weights: {raw_weights}")
+        bt.logging.debug(f"raw_weight_uids: {self.metagraph.uids.tolist()}")
         # Process the raw weights to final_weights via subtensor limitations.
         (
             processed_weight_uids,
@@ -254,8 +255,8 @@ class BaseValidatorNeuron(BaseNeuron):
             subtensor=self.subtensor,
             metagraph=self.metagraph,
         )
-        bt.logging.debug("processed_weights", processed_weights)
-        bt.logging.debug("processed_weight_uids", processed_weight_uids)
+        bt.logging.debug(f"processed_weights: {processed_weights}")
+        bt.logging.debug(f"processed_weight_uids: {processed_weight_uids}")
 
         # Convert to uint16 weights and uids.
         (
@@ -264,8 +265,8 @@ class BaseValidatorNeuron(BaseNeuron):
         ) = convert_weights_and_uids_for_emit(
             uids=processed_weight_uids, weights=processed_weights
         )
-        bt.logging.debug("uint_weights", uint_weights)
-        bt.logging.debug("uint_uids", uint_uids)
+        bt.logging.debug(f"uint_weights: {uint_weights}")
+        bt.logging.debug(f"uint_uids: {uint_uids}")
 
         # Set the weights on chain via our subtensor connection.
         result, msg = self.subtensor.set_weights(
@@ -280,7 +281,7 @@ class BaseValidatorNeuron(BaseNeuron):
         if result is True:
             bt.logging.info("set_weights on chain successfully!")
         else:
-            bt.logging.error("set_weights failed", msg)
+            bt.logging.error(f"set_weights failed: {msg}")
 
     def resync_metagraph(self):
         """Resyncs the metagraph and updates the hotkeys and moving averages based on the new metagraph."""
@@ -299,31 +300,39 @@ class BaseValidatorNeuron(BaseNeuron):
         bt.logging.info(
             "Metagraph updated, re-syncing hotkeys, dendrite pool and moving averages"
         )
+        
         # Zero out all hotkeys that have been replaced.
-        for uid, hotkey in enumerate(self.hotkeys):
-            if hotkey != self.metagraph.hotkeys[uid]:
+        current_n = len(self.metagraph.hotkeys)
+        for uid in range(min(len(self.hotkeys), current_n)):
+            if self.hotkeys[uid] != self.metagraph.hotkeys[uid]:
                 self.scores[uid] = 0  # hotkey has been replaced
 
         # Check to see if the metagraph has changed size.
         # If so, we need to add new hotkeys and moving averages.
-        if len(self.hotkeys) < len(self.metagraph.hotkeys):
+        if len(self.hotkeys) < current_n:
             # Update the size of the moving average scores.
-            new_moving_average = np.zeros((self.metagraph.n))
+            new_moving_average = np.zeros(current_n, dtype=np.float32)
             min_len = min(len(self.hotkeys), len(self.scores))
-            new_moving_average[:min_len] = self.scores[:min_len]
+            if min_len > 0:
+                new_moving_average[:min_len] = self.scores[:min_len]
             self.scores = new_moving_average
 
         # Update the hotkeys.
         self.hotkeys = copy.deepcopy(self.metagraph.hotkeys)
 
-    def update_scores(self, rewards: np.ndarray, uids: List[int]):
-        """Performs exponential moving average on the scores based on the rewards received from the miners."""
-
+    def update_scores(self, rewards: np.ndarray, uids: List[int]) -> None:
+        """
+        Performs exponential moving average on the scores based on the rewards received from the miners.
+        
+        Args:
+            rewards: Array of reward values for each UID.
+            uids: List of UIDs corresponding to the rewards.
+        """
         # Check if rewards contains NaN values.
         if np.isnan(rewards).any():
             bt.logging.warning(f"NaN values detected in rewards: {rewards}")
             # Replace any NaN values in rewards with 0.
-            rewards = np.nan_to_num(rewards, nan=0)
+            rewards = np.nan_to_num(rewards, nan=0.0)
 
         # Ensure rewards is a numpy array.
         rewards = np.asarray(rewards)
@@ -336,47 +345,71 @@ class BaseValidatorNeuron(BaseNeuron):
 
         # Handle edge case: If either rewards or uids_array is empty.
         if rewards.size == 0 or uids_array.size == 0:
-            bt.logging.info(f"rewards: {rewards}, uids_array: {uids_array}")
+            bt.logging.debug(f"rewards: {rewards}, uids_array: {uids_array}")
             bt.logging.warning("Either rewards or uids_array is empty. No updates will be performed.")
             return
 
         # Check if sizes of rewards and uids_array match.
         if rewards.size != uids_array.size:
-            raise ValueError(f"Shape mismatch: rewards array of shape {rewards.shape} "
-                             f"cannot be broadcast to uids array of shape {uids_array.shape}")
+            raise ValueError(
+                f"Shape mismatch: rewards array of shape {rewards.shape} "
+                f"cannot be broadcast to uids array of shape {uids_array.shape}"
+            )
 
         # Compute forward pass rewards, assumes uids are mutually exclusive.
         # shape: [ metagraph.n ]
-        scattered_rewards: np.ndarray = np.zeros_like(self.scores)
-        scattered_rewards[uids_array] = rewards
-        bt.logging.debug(f"Scattered rewards: {rewards}")
+        scattered_rewards: np.ndarray = np.zeros_like(self.scores, dtype=np.float32)
+        
+        # Ensure uids are within valid range
+        valid_mask = (uids_array >= 0) & (uids_array < len(self.scores))
+        if not np.all(valid_mask):
+            invalid_uids = uids_array[~valid_mask]
+            bt.logging.warning(f"Invalid UIDs detected: {invalid_uids}. Skipping these.")
+            uids_array = uids_array[valid_mask]
+            rewards = rewards[valid_mask]
+        
+        if len(uids_array) > 0:
+            scattered_rewards[uids_array] = rewards
+            bt.logging.debug(f"Scattered rewards: {rewards}")
 
         # Update scores with rewards produced by this step.
         # shape: [ metagraph.n ]
         alpha: float = self.config.neuron.moving_average_alpha
-        self.scores: np.ndarray = alpha * scattered_rewards + (
-            1 - alpha
-        ) * self.scores
+        self.scores = (alpha * scattered_rewards + (1 - alpha) * self.scores).astype(np.float32)
         bt.logging.debug(f"Updated moving avg scores: {self.scores}")
 
-    def save_state(self):
+    def save_state(self) -> None:
         """Saves the state of the validator to a file."""
         bt.logging.info("Saving validator state.")
 
-        # Save the state of the validator to file.
-        np.savez(
-            self.config.neuron.full_path + "/state.npz",
-            step=self.step,
-            scores=self.scores,
-            hotkeys=self.hotkeys,
-        )
+        try:
+            # Save the state of the validator to file.
+            state_path = os.path.join(self.config.neuron.full_path, "state.npz")
+            np.savez(
+                state_path,
+                step=self.step,
+                scores=self.scores,
+                hotkeys=self.hotkeys,
+            )
+            bt.logging.debug(f"State saved to {state_path}")
+        except Exception as e:
+            bt.logging.error(f"Failed to save state: {e}")
 
-    def load_state(self):
+    def load_state(self) -> None:
         """Loads the state of the validator from a file."""
         bt.logging.info("Loading validator state.")
 
-        # Load the state of the validator from file.
-        state = np.load(self.config.neuron.full_path + "/state.npz")
-        self.step = state["step"]
-        self.scores = state["scores"]
-        self.hotkeys = state["hotkeys"]
+        try:
+            # Load the state of the validator from file.
+            state_path = os.path.join(self.config.neuron.full_path, "state.npz")
+            if not os.path.exists(state_path):
+                bt.logging.info(f"State file not found at {state_path}. Starting with fresh state.")
+                return
+            
+            state = np.load(state_path, allow_pickle=True)
+            self.step = int(state["step"])
+            self.scores = state["scores"].astype(np.float32)
+            self.hotkeys = state["hotkeys"].tolist() if isinstance(state["hotkeys"], np.ndarray) else state["hotkeys"]
+            bt.logging.info(f"State loaded from {state_path}")
+        except Exception as e:
+            bt.logging.warning(f"Failed to load state: {e}. Starting with fresh state.")

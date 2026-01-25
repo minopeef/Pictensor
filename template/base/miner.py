@@ -53,7 +53,8 @@ class BaseMinerNeuron(BaseNeuron):
                 "You are allowing non-registered entities to send requests to your miner. This is a security risk."
             )
         # The axon handles request processing, allowing validators to send this miner requests.
-        self.axon = bt.axon(wallet=self.wallet, config=self.config() if callable(self.config) else self.config)
+        config_obj = self.config() if callable(self.config) else self.config
+        self.axon = bt.axon(wallet=self.wallet, config=config_obj)
 
         # Attach determiners which functions are called when servicing a request.
         bt.logging.info(f"Attaching forward function to miner axon.")
@@ -134,7 +135,10 @@ class BaseMinerNeuron(BaseNeuron):
 
         # In case of unforeseen errors, the miner will log the error and continue operations.
         except Exception as e:
-            bt.logging.error(traceback.format_exc())
+            bt.logging.error(f"Error during miner operation: {str(e)}")
+            bt.logging.debug(traceback.format_exc())
+            # Re-raise to allow proper error handling
+            raise
 
     def run_in_background_thread(self):
         """
@@ -185,8 +189,18 @@ class BaseMinerNeuron(BaseNeuron):
         self.stop_run_thread()
 
     def resync_metagraph(self):
-        """Resyncs the metagraph and updates the hotkeys and moving averages based on the new metagraph."""
+        """Resyncs the metagraph and updates the hotkeys based on the new metagraph."""
         bt.logging.info("resync_metagraph()")
 
         # Sync the metagraph.
         self.metagraph.sync(subtensor=self.subtensor)
+        
+        # Update UID if it has changed
+        try:
+            self.uid = self.metagraph.hotkeys.index(
+                self.wallet.hotkey.ss58_address
+            )
+        except ValueError:
+            bt.logging.warning(
+                f"Hotkey {self.wallet.hotkey.ss58_address} not found in metagraph after sync."
+            )

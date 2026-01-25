@@ -42,17 +42,26 @@ def get_rewards(
     Returns an array of rewards for the given query and responses.
 
     Args:
-    - query (int): The query sent to the miner.
-    - responses (List[float]): A list of responses from the miner.
+        self: The validator instance.
+        query (int): The query sent to the miner.
+        responses (List[float]): A list of responses from the miner.
 
     Returns:
-    - np.ndarray: An array of rewards for the given query and responses.
+        np.ndarray: An array of rewards for the given query and responses.
     """
     # Get all the reward results by iteratively calling your reward() function.
     # Cast response to int as the reward function expects an int type for response.
     
-    # Remove any None values
-    responses = [response for response in responses if response is not None]
+    # Remove any None values and filter invalid responses
+    valid_responses = [
+        response for response in responses 
+        if response is not None and isinstance(response, (int, float))
+    ]
+    
+    if not valid_responses:
+        return np.array([], dtype=np.float32)
+    
     return np.array(
-        [reward(query, int(response)) for response in responses]
+        [reward(query, int(response)) for response in valid_responses],
+        dtype=np.float32
     )

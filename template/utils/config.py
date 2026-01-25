@@ -42,15 +42,15 @@ def check_config(cls, config: "bt.Config"):
     bt.logging.check_config(config)
 
     full_path = os.path.expanduser(
-        "{}/{}/{}/netuid{}/{}".format(
+        os.path.join(
             config.logging.logging_dir,  # TODO: change from ~/.bittensor/miners to ~/.bittensor/neurons
             config.wallet.name,
             config.wallet.hotkey,
-            config.netuid,
+            f"netuid{config.netuid}",
             config.neuron.name,
         )
     )
-    print("full path:", full_path)
+    bt.logging.debug(f"Full path: {full_path}")
     config.neuron.full_path = os.path.expanduser(full_path)
     if not os.path.exists(config.neuron.full_path):
         os.makedirs(config.neuron.full_path, exist_ok=True)

@@ -110,10 +110,23 @@ class BaseNeuron(ABC):
 
     @abstractmethod
     async def forward(self, synapse: bt.Synapse) -> bt.Synapse:
+        """
+        Abstract method to process incoming synapses.
+        
+        Args:
+            synapse: The incoming synapse to process.
+            
+        Returns:
+            The processed synapse with response data.
+        """
         ...
 
     @abstractmethod
-    def run(self):
+    def run(self) -> None:
+        """
+        Abstract method to run the neuron's main loop.
+        This should be implemented by subclasses to define the neuron's behavior.
+        """
         ...
 
     def sync(self):
@@ -153,6 +166,12 @@ class BaseNeuron(ABC):
         ) > self.config.neuron.epoch_length
 
     def should_set_weights(self) -> bool:
+        """
+        Check if weights should be set based on epoch length and neuron type.
+        
+        Returns:
+            bool: True if weights should be set, False otherwise.
+        """
         # Don't set weights on initialization.
         if self.step == 0:
             return False
@@ -162,11 +181,14 @@ class BaseNeuron(ABC):
             return False
 
         # Define appropriate logic for when set weights.
+        # Don't set weights if you're a miner
+        if self.neuron_type == "MinerNeuron":
+            return False
+            
         return (
             (self.block - self.metagraph.last_update[self.uid])
             > self.config.neuron.epoch_length
-            and self.neuron_type != "MinerNeuron"
-        )  # don't set weights if you're a miner
+        )
 
     def save_state(self):
         bt.logging.warning(

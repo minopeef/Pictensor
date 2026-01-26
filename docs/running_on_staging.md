@@ -1,10 +1,14 @@
 # Running Subnet Locally
 
-This tutorial will guide you through:
+This tutorial walks you through running your incentive mechanism on a **local blockchain** (staging): setting up a local chain, creating a subnet, and running miner and validator.
 
-- Setting up a local blockchain that is not connected to either Bittensor testchain or mainchain
-- Creating a subnet
-- Run your incentive mechanism on the subnet.
+## Table of contents
+
+- [Local blockchain vs local subtensor node](#local-blockchain-vs-local-subtensor-node)
+- [Prerequisites](#prerequisites)
+- Steps 1–15: Install dependencies, clone subtensor, set up Rust, build and run localnet, install template, create wallets, mint, create subnet, register keys, add stake, validate, run miner/validator, set weights, verify.
+
+---
 
 ## Local blockchain vs local subtensor node 
 
@@ -94,21 +98,11 @@ BUILD_BINARY=0 ./scripts/localnet.sh
 
 ## 6. Install subnet template
 
-`cd` to your project directory and clone the bittensor subnet template repository:
+From your project directory, clone and install the Bittensor subnet template:
 
 ```bash
 git clone https://github.com/opentensor/bittensor-subnet-template.git
-```
-
-Navigate to the cloned repository:
-
-```bash
 cd bittensor-subnet-template
-```
-
-Install the bittensor-subnet-template Python package:
-
-```bash
 python -m pip install -e .
 ```
 
@@ -146,7 +140,7 @@ btcli wallet new_hotkey --wallet.name validator --wallet.hotkey default
 
 ## 8. Mint tokens from faucet
 
-You will need tokens to initialize the intentive mechanism on the chain as well as for registering the subnet. 
+You will need tokens to initialize the **incentive** mechanism on the chain and to register the subnet. 
 
 Run the following commands to mint faucet tokens for the owner and for the validator.
 
@@ -293,19 +287,21 @@ miner    default  1      True   0.00000  0.00000  0.00000    0.00000    0.00000 
 
 ## 13. Run subnet miner and subnet validator
 
-Run the subnet miner and subnet validator. Make sure to specify your subnet parameters.
+Use your subnet `netuid` and chain endpoint from the earlier steps.
 
-Run the subnet miner:
+**Miner** (run in one terminal):
 
 ```bash
 python neurons/miner.py --netuid 1 --subtensor.chain_endpoint ws://127.0.0.1:9946 --wallet.name miner --wallet.hotkey default --logging.debug
 ```
 
-Run the subnet validator:
+**Validator** (run in another terminal):
 
 ```bash
 python neurons/validator.py --netuid 1 --subtensor.chain_endpoint ws://127.0.0.1:9946 --wallet.name validator --wallet.hotkey default --logging.debug
 ```
+
+Each process runs until you stop it with Ctrl+C.
 
 ## 14. Set weights for your subnet
 

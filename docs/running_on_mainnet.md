@@ -1,18 +1,27 @@
 # Running Subnet on Mainnet
 
-This tutorial shows how to use the bittensor `btcli` to create a subnetwork and connect your incentive mechanism to it. 
+Create a subnet on the Bittensor **mainnet** and run your incentive mechanism. Mainnet uses real TAO and is open to anyone. Subnet creation incurs a `lock_cost` in TAO.
 
-**IMPORTANT:** Before attempting to register on mainnet, we strongly recommend that you:
-- First run [Running Subnet Locally](running_on_staging.md), and
-- Then run [Running on the Testnet](running_on_testnet.md).
-
-Your incentive mechanisms running on the mainnet are open to anyone. They emit real TAO. Creating these mechanisms incur a `lock_cost` in TAO.
+**IMPORTANT:** Complete [Running Subnet Locally](running_on_staging.md) and [Running on the Testnet](running_on_testnet.md) first.
 
 **DANGER**
 - Do not expose your private keys.
-- Only use your testnet wallet.
-- Do not reuse the password of your mainnet wallet.
-- Make sure your incentive mechanism is resistant to abuse. 
+- Use a dedicated mainnet wallet; do not reuse testnet or mainnet passwords across environments.
+- Harden your incentive mechanism against abuse.
+
+## Table of contents
+
+1. [Prerequisites](#prerequisites)
+2. [Install template](#1-install-your-subnet-template)
+3. [Create wallets](#2-create-wallets)
+4. [Subnet creation price](#3-getting-the-price-of-subnet-creation)
+5. [Purchase a slot](#4-purchasing-a-slot)
+6. [Register keys (optional)](#5-optional-register-keys)
+7. [Verify registration](#6-check-that-your-keys-have-been-registered)
+8. [Run miner and validator](#7-run-subnet-miner-and-subnet-validator)
+9. [Emissions and stopping](#8-get-emissions-flowing)
+
+---
 
 ## Prerequisites
 
@@ -20,30 +29,18 @@ Before proceeding further, make sure that you have installed Bittensor. See the 
 
 - [Install `bittensor`](https://github.com/opentensor/bittensor#install).
 
-After installing `bittensor`, proceed as below:
-
-## Steps
+After installing `bittensor`, proceed as below.
 
 ## 1. Install your subnet template
 
 **NOTE: Skip this step if** you already did this during local testing and development.
 
-In your project directory:
+From your project directory, clone and install the template:
 
 ```bash
-git clone https://github.com/opentensor/bittensor-subnet-template.git 
-```
-
-Next, `cd` into `bittensor-subnet-template` repo directory:
-
-```bash
+git clone https://github.com/opentensor/bittensor-subnet-template.git
 cd bittensor-subnet-template
-```
-
-Install the Bittensor subnet template package:
-
-```bash
-python -m pip install -e . # Install your subnet template package
+python -m pip install -e .
 ```
 
 ## 2. Create wallets 
@@ -199,29 +196,21 @@ miner    default  1      True   0.00000  0.00000  0.00000    0.00000    0.00000 
 
 ## 7. Run subnet miner and subnet validator
 
-Run the subnet miner:
+Use the `netuid` of your subnet (e.g. `1`). Mainnet defaults to the finney network.
+
+**Miner** (one terminal):
 
 ```bash
-python neurons/miner.py --netuid 1  --wallet.name miner --wallet.hotkey default --logging.debug
+python neurons/miner.py --netuid 1 --wallet.name miner --wallet.hotkey default --logging.debug
 ```
 
-You will see the below terminal output:
+**Validator** (another terminal):
 
 ```bash
->> 2023-08-08 16:58:11.223 |       INFO       | Running miner for subnet: 1 on network: wss://entrypoint-finney.opentensor.ai:443 with config: ...
+python neurons/validator.py --netuid 1 --wallet.name validator --wallet.hotkey default --logging.debug
 ```
 
-Run the subnet validator:
-
-```bash
-python neurons/validator.py --netuid 1  --wallet.name validator --wallet.hotkey default --logging.debug
-```
-
-You will see the below terminal output:
-
-```bash
->> 2023-08-08 16:58:11.223 |       INFO       | Running validator for subnet: 1 on network: wss://entrypoint-finney.opentensor.ai:443 with config: ...
-```
+Stop either process with Ctrl+C.
 
 ## 8. Get emissions flowing
 
@@ -239,6 +228,4 @@ btcli root weights
 
 ## 9. Stopping your nodes
 
-To stop your nodes, press CTRL + C in the terminal where the nodes are running.
-
----
+Press **Ctrl+C** in each terminal where a miner or validator is running.

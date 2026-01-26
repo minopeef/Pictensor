@@ -1,14 +1,28 @@
 # Running Subnet on Testnet
 
-This tutorial shows how to use the Bittensor testnet to create a subnet and run your incentive mechanism on it. 
+Create a subnet on the Bittensor **testnet** and run your incentive mechanism. Testnet uses test TAO, not real TAO.
 
-**IMPORTANT:** We strongly recommend that you first run [Running Subnet Locally](running_on_staging.md) before running on the testnet. Incentive mechanisms running on the testnet are open to anyone, and although these mechanisms on testnet do not emit real TAO, they cost you test TAO which you must create. 
+**IMPORTANT:** Run [Running Subnet Locally](running_on_staging.md) first. Testnet is open to anyone and costs test TAO.
 
 **DANGER**
 - Do not expose your private keys.
-- Only use your testnet wallet.
-- Do not reuse the password of your mainnet wallet.
-- Make sure your incentive mechanism is resistant to abuse. 
+- Use only testnet wallets and do not reuse mainnet passwords.
+- Harden your incentive mechanism against abuse.
+
+## Table of contents
+
+1. [Prerequisites](#prerequisites)
+2. [Install template](#1-install-bittensor-subnet-template)
+3. [Create wallets](#2-create-wallets)
+4. [Subnet creation price](#3-get-the-price-of-subnet-creation)
+5. [Faucet (optional)](#4-optional-get-faucet-tokens)
+6. [Purchase a slot](#5-purchase-a-slot)
+7. [Register keys](#6-register-keys)
+8. [Verify registration](#7-check-that-your-keys-have-been-registered)
+9. [Run miner and validator](#8-run-subnet-miner-and-subnet-validator)
+10. [Emissions and stopping](#9-get-emissions-flowing)
+
+---
 
 ## Prerequisites
 
@@ -28,16 +42,11 @@ After installing `bittensor`, proceed as below:
 git clone https://github.com/opentensor/bittensor-subnet-template.git 
 ```
 
-Next, `cd` into bittensor-subnet-template repo directory:
+Then enter the repo and install the package:
 
 ```bash
-cd bittensor-subnet-template # Enter the 
-```
-
-Install the bittensor-subnet-template package:
-
-```bash
-python -m pip install -e . 
+cd bittensor-subnet-template
+python -m pip install -e .
 ```
 
 ## 2. Create wallets 
@@ -126,27 +135,18 @@ Enter the owner wallet name which gives permissions to the coldkey:
 
 This step registers your subnet validator and subnet miner keys to the subnet, giving them the **first two slots** on the subnet.
 
-Register your miner key to the subnet:
+Register your miner key (use the `netuid` from the subnet you created, e.g. `1`):
 
 ```bash
-btcli subnet recycle_register --netuid 13 --subtensor.network test --wallet.name miner --wallet.hotkey default
+btcli subnet recycle_register --netuid 1 --subtensor.network test --wallet.name miner --wallet.hotkey default
 ```
 
-Follow the below prompts:
+When prompted, enter that netuid and confirm.
+
+Register your validator key:
 
 ```bash
->> Enter netuid [1] (1): # Enter netuid 1 to specify the subnet you just created.
->> Continue Registration?
-  hotkey:     ...
-  coldkey:    ...
-  network:    finney [y/n]: # Select yes (y)
->> ✅ Registered
-```
-
-Next, register your validator key to the subnet:
-
-```bash
-btcli subnet recycle_register --netuid 13 --subtensor.network test --wallet.name validator --wallet.hotkey default
+btcli subnet recycle_register --netuid 1 --subtensor.network test --wallet.name validator --wallet.hotkey default
 ```
 
 Follow the prompts:
@@ -198,29 +198,21 @@ miner    default  1      True   0.00000  0.00000  0.00000    0.00000    0.00000 
 
 ## 8. Run subnet miner and subnet validator
 
-Run the subnet miner:
+Use the same `netuid` you used when creating the subnet (e.g. `1`).
+
+**Miner** (one terminal):
 
 ```bash
 python neurons/miner.py --netuid 1 --subtensor.network test --wallet.name miner --wallet.hotkey default --logging.debug
 ```
 
-You will see the below terminal output:
-
-```bash
->> 2023-08-08 16:58:11.223 |       INFO       | Running miner for subnet: 1 on network: ws://127.0.0.1:9946 with config: ...
-```
-
-Next, run the subnet validator:
+**Validator** (another terminal):
 
 ```bash
 python neurons/validator.py --netuid 1 --subtensor.network test --wallet.name validator --wallet.hotkey default --logging.debug
 ```
 
-You will see the below terminal output:
-
-```bash
->> 2023-08-08 16:58:11.223 |       INFO       | Running validator for subnet: 1 on network: ws://127.0.0.1:9946 with config: ...
-```
+Stop either process with Ctrl+C.
 
 
 ## 9. Get emissions flowing
@@ -239,4 +231,4 @@ btcli root weights --subtensor.network test
 
 ## 10. Stopping your nodes
 
-To stop your nodes, press CTRL + C in the terminal where the nodes are running.
+Press **Ctrl+C** in each terminal where a miner or validator is running.

@@ -1,35 +1,117 @@
-from substrateinterface import Keypair
-from os import getenv, environ
-from datetime import datetime
-import bittensor
+"""
+Generate a cryptographic signature for a message using a Bittensor wallet.
 
-# Hardcode or set the environment variable WALLET_PASS to the password for the wallet
-# environ["WALLET_PASS"] = ""
+This script signs a message with the wallet's coldkey and outputs a file
+containing the original message, the signer's SS58 address, and the signature.
+The output file can be verified using verify.py.
+
+Usage:
+    python generate.py --message "Your message here" --name your_wallet_name
+    python generate.py --message "Your message here" --name your_wallet_name --output custom_output.txt
+"""
+
+import argparse
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+import bittensor as bt
 
 
-def main(args):
-    wallet = bittensor.wallet(name=args.name)
-    keypair = wallet.coldkey
+def generate_signature(wallet_name: str, message: str, output_file: str) -> bool:
+    """
+    Generate a cryptographic signature for a message using a Bittensor wallet.
 
-    timestamp = datetime.now()
-    timezone = timestamp.astimezone().tzname()
+    Args:
+        wallet_name: Name of the Bittensor wallet to use for signing.
+        message: The message to sign.
+        output_file: Path to the output file where the signed message will be saved.
 
-    message = f"On {timestamp} {timezone} {args.message}"
-    signature = keypair.sign(data=message)
+    Returns:
+        True if signature was generated successfully, False otherwise.
+    """
+    try:
+        # Load the wallet
+        wallet = bt.wallet(name=wallet_name)
+        keypair = wallet.coldkey
+    except Exception as e:
+        print(f"Error: Failed to load wallet '{wallet_name}': {e}")
+        return False
 
-    file_contents = f"{message}\n\tSigned by: {keypair.ss58_address}\n\tSignature: {signature.hex()}"
+    # Generate timestamp in ISO 8601 format with timezone
+    timestamp = datetime.now(timezone.utc).isoformat()
+
+    # Construct the message with timestamp
+    full_message = f"[{timestamp}] {message}"
+
+    try:
+        # Sign the message
+        signature = keypair.sign(data=full_message)
+    except Exception as e:
+        print(f"Error: Failed to sign message: {e}")
+        return False
+
+    # Format the output
+    file_contents = (
+        f"Message: {full_message}\n"
+        f"Signed by: {keypair.ss58_address}\n"
+        f"Signature: {signature.hex()}"
+    )
+
+    # Write to file
+    output_path = Path(output_file)
+    try:
+        with open(output_path, "w", encoding="utf-8") as f:
+            f.write(file_contents)
+    except IOError as e:
+        print(f"Error: Failed to write to file '{output_file}': {e}")
+        return False
+
     print(file_contents)
-    open("message_and_signature.txt", "w").write(file_contents)
+    print(f"\nSignature generated and saved to: {output_path.absolute()}")
+    return True
 
-    print(f"Signature generated and saved to message_and_signature.txt")
+
+def main():
+    """Parse arguments and generate signature."""
+    parser = argparse.ArgumentParser(
+        description="Generate a cryptographic signature for a message using a Bittensor wallet.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+    python generate.py --message "Hello, Bittensor!" --name default
+    python generate.py --message "Important announcement" --name my_wallet --output announcement.txt
+        """,
+    )
+    parser.add_argument(
+        "--message",
+        type=str,
+        required=True,
+        help="The message to sign",
+    )
+    parser.add_argument(
+        "--name",
+        type=str,
+        default="default",
+        help="The wallet name (default: 'default')",
+    )
+    parser.add_argument(
+        "--output",
+        type=str,
+        default="message_and_signature.txt",
+        help="Output file path (default: 'message_and_signature.txt')",
+    )
+
+    args = parser.parse_args()
+
+    success = generate_signature(
+        wallet_name=args.name,
+        message=args.message,
+        output_file=args.output,
+    )
+
+    sys.exit(0 if success else 1)
 
 
 if __name__ == "__main__":
-    import argparse
-
-    parser = argparse.ArgumentParser(description="Generate a signature")
-    parser.add_argument("--message", help="The message to sign", type=str)
-    parser.add_argument("--name", help="The wallet name", type=str)
-    args = parser.parse_args()
-
-    main(args)
+    main()

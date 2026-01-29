@@ -1,7 +1,7 @@
 # The MIT License (MIT)
 # Copyright © 2023 Yuma Rao
-# TODO(developer): Set your name
-# Copyright © 2023 <your name>
+# Copyright © 2023 Opentensor Foundation
+# Copyright © 2025 Pictensor
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
 # documentation files (the “Software”), to deal in the Software without restriction, including without limitation
@@ -36,7 +36,7 @@ class Miner(BaseMinerNeuron):
 
     def __init__(self, config=None):
         super().__init__(config=config)
-        # TODO(developer): Add any use-case-specific initialization here.
+        # Add any use-case-specific initialization here.
 
     async def forward(self, synapse: Dummy) -> Dummy:
         """
@@ -45,7 +45,7 @@ class Miner(BaseMinerNeuron):
         Replace this with your protocol logic. Example: set ``synapse.dummy_output``
         from ``synapse.dummy_input`` (or your protocol fields).
         """
-        # TODO(developer): Replace with your implementation.
+        # Replace with your protocol logic.
         synapse.dummy_output = synapse.dummy_input * 2
         return synapse
 

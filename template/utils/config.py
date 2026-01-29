@@ -43,7 +43,7 @@ def check_config(cls, config: "bt.Config"):
 
     full_path = os.path.expanduser(
         os.path.join(
-            config.logging.logging_dir,  # TODO: change from ~/.bittensor/miners to ~/.bittensor/neurons
+            config.logging.logging_dir,
             config.wallet.name,
             config.wallet.hotkey,
             f"netuid{config.netuid}",
@@ -154,7 +154,7 @@ def add_miner_args(cls, parser):
     parser.add_argument(
         "--wandb.project_name",
         type=str,
-        default="template-miners",
+        default="pictensor-miners",
         help="Wandb project to log to.",
     )
 
@@ -232,7 +232,7 @@ def add_validator_args(cls, parser):
         "--wandb.project_name",
         type=str,
         help="The name of the project where you are sending the new run.",
-        default="template-validators",
+        default="pictensor-validators",
     )
 
     parser.add_argument(

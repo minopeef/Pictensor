@@ -10,6 +10,7 @@
   - [Install](#install)
 - [Writing Your Own Incentive Mechanism](#writing-your-own-incentive-mechanism)
 - [Writing Your Own Subnet API](#writing-your-own-subnet-api)
+- [Verify Scripts](#verify-scripts)
 - [Subnet Links](#subnet-links)
 - [License](#license)
 
@@ -272,6 +273,30 @@ data = await RetrieveUserAPI(
 print(data)
 > b"Hello Bittensor!"
 ```
+
+---
+
+## Verify Scripts
+
+The `verify/` directory contains scripts for generating and verifying cryptographic signatures using Bittensor wallets. Use them to prove ownership of a wallet or to sign off on messages (e.g. for attestations or releases).
+
+- **`verify/generate.py`** — Signs a message with your wallet’s coldkey and writes the message, SS58 address, and signature to a file.
+- **`verify/verify.py`** — Reads a signed message file and verifies the signature against the message and signer address.
+
+**Generate a signature:**
+
+```bash
+python verify/generate.py --message "Your message here" --name default
+python verify/generate.py --message "Release v1.0" --name my_wallet --output release_signature.txt
+```
+
+**Verify a signature:**
+
+```bash
+python verify/verify.py --file message_and_signature.txt
+```
+
+Both scripts support a labeled file format (e.g. `Message: ...`, `Signed by: ...`, `Signature: ...`) and remain compatible with the older tab-separated format.
 
 ---
 

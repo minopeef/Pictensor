@@ -16,10 +16,12 @@ The following is a set of guidelines for contributing to the Bittensor ecosystem
 
 
 ## How Can I Contribute?
-TODO(developer): Define your desired contribution procedure.
+
+Open an issue or pull request on this repository. Follow the pull request process below.
 
 ## Communication Channels
-TODO(developer): Place your communication channels here
+
+Use GitHub issues and pull requests for discussion. Replace this with your project's communication channels (e.g. Discord, forum) if you have them.
 
 > Please follow the Bittensor Subnet [style guide](./STYLE.md) regardless of your contribution type. 
 
@@ -99,7 +101,7 @@ After you submit a pull request, it will be reviewed by the maintainers. They ma
 > Note: Be sure to merge the latest from "upstream" before making a pull request:
 
 ```bash
-git remote add upstream https://github.com/opentensor/bittensor.git # TODO(developer): replace with your repo URL
+git remote add upstream https://github.com/opentensor/bittensor-subnet-template.git  # or your fork URL
 git fetch upstream
 git merge upstream/<your-branch-name>
 git push origin <your-branch-name>

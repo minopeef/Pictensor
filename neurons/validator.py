@@ -1,7 +1,7 @@
 # The MIT License (MIT)
 # Copyright © 2023 Yuma Rao
-# TODO(developer): Set your name
-# Copyright © 2023 <your name>
+# Copyright © 2023 Opentensor Foundation
+# Copyright © 2025 Pictensor
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
 # documentation files (the “Software”), to deal in the Software without restriction, including without limitation
@@ -36,7 +36,7 @@ class Validator(BaseValidatorNeuron):
         super().__init__(config=config)
         bt.logging.info("Loading validator state.")
         self.load_state()
-        # TODO(developer): Add any use-case-specific initialization here.
+        # Add any use-case-specific initialization here.
 
     async def forward(self) -> None:
         """

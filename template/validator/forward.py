@@ -1,7 +1,7 @@
 # The MIT License (MIT)
 # Copyright © 2023 Yuma Rao
-# TODO(developer): Set your name
-# Copyright © 2023 <your name>
+# Copyright © 2023 Opentensor Foundation
+# Copyright © 2025 Pictensor
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
 # documentation files (the “Software”), to deal in the Software without restriction, including without limitation
@@ -61,8 +61,7 @@ async def forward(self: "BaseValidatorNeuron") -> None:
         # Log the results for monitoring purposes.
         bt.logging.debug(f"Received {len(responses)} responses from {len(miner_uids)} miners")
 
-        # TODO(developer): Define how the validator scores responses.
-        # Adjust the scores based on responses from miners.
+        # Define how the validator scores responses (see template/validator/reward.py).
         rewards = get_rewards(self, query=self.step, responses=responses)
 
         if len(rewards) > 0:

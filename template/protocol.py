@@ -1,7 +1,7 @@
 # The MIT License (MIT)
 # Copyright © 2023 Yuma Rao
-# TODO(developer): Set your name
-# Copyright © 2023 <your name>
+# Copyright © 2023 Opentensor Foundation
+# Copyright © 2025 Pictensor
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
 # documentation files (the “Software”), to deal in the Software without restriction, including without limitation
@@ -19,8 +19,6 @@
 
 import typing
 import bittensor as bt
-
-# TODO(developer): Rewrite with your protocol definition.
 
 # This is the protocol for the dummy miner and validator.
 # It is a simple request-response protocol where the validator sends a request

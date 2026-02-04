@@ -2,6 +2,7 @@
 # Copyright © 2021 Yuma Rao
 # Copyright © 2023 Opentensor Foundation
 # Copyright © 2023 Opentensor Technologies Inc
+# Copyright © 2025 Pictensor
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
 # documentation files (the “Software”), to deal in the Software without restriction, including without limitation
@@ -18,15 +19,19 @@
 # DEALINGS IN THE SOFTWARE.
 
 import bittensor as bt
-from typing import List, Optional, Union, Any, Dict
-from template.protocol import Dummy
+from typing import Any, List, Union
+
 from bittensor.subnets import SubnetsAPI
+
+from template.protocol import Dummy
 
 
 class DummyAPI(SubnetsAPI):
+    """API client for querying the template subnet using the Dummy protocol."""
+
     def __init__(self, wallet: "bt.wallet"):
         super().__init__(wallet)
-        self.netuid = 33
+        self.netuid = 1  # Align with template config default
         self.name = "dummy"
 
     def prepare_synapse(self, dummy_input: int) -> Dummy:

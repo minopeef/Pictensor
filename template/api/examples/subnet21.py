@@ -2,6 +2,7 @@
 # Copyright © 2021 Yuma Rao
 # Copyright © 2023 Opentensor Foundation
 # Copyright © 2023 Opentensor Technologies Inc
+# Copyright © 2025 Pictensor
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
 # documentation files (the “Software”), to deal in the Software without restriction, including without limitation
@@ -17,10 +18,15 @@
 # OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 
+"""
+Example API client for Storage Subnet 21.
+Requires the storage-subnet package: https://github.com/ifrit98/storage-subnet
+"""
+
 import base64
 import bittensor as bt
-from abc import ABC, abstractmethod
 from typing import Any, List, Union
+
 from bittensor.subnets import SubnetsAPI
 
 try:
@@ -29,11 +35,17 @@ try:
         encrypt_data,
         decrypt_data_with_private_key,
     )
-except:
+    from storage.validator.protocol import StoreUser, RetrieveUser
+except ImportError:
     storage_url = "https://github.com/ifrit98/storage-subnet"
-    bt.logging.error(
-        f"Storage Subnet 21 not installed. Please visit: {storage_url} and install the package to use this example."
+    bt.logging.warning(
+        f"Storage Subnet 21 not installed. Install the package to use this example: {storage_url}"
     )
+    generate_cid_string = None
+    encrypt_data = None
+    decrypt_data_with_private_key = None
+    StoreUser = None  # type: ignore[misc, assignment]
+    RetrieveUser = None  # type: ignore[misc, assignment]
 
 
 class StoreUserAPI(SubnetsAPI):
@@ -44,10 +56,14 @@ class StoreUserAPI(SubnetsAPI):
     def prepare_synapse(
         self,
         data: bytes,
-        encrypt=False,
-        ttl=60 * 60 * 24 * 30,
-        encoding="utf-8",
-    ) -> StoreUser:
+        encrypt: bool = False,
+        ttl: int = 60 * 60 * 24 * 30,
+        encoding: str = "utf-8",
+    ) -> Any:
+        if StoreUser is None:
+            raise RuntimeError(
+                "Storage subnet package not installed. Install from https://github.com/ifrit98/storage-subnet"
+            )
         data = bytes(data, encoding) if isinstance(data, str) else data
         encrypted_data, encryption_payload = (
             encrypt_data(data, self.wallet) if encrypt else (data, "{}")
@@ -103,7 +119,11 @@ class RetrieveUserAPI(SubnetsAPI):
         super().__init__(wallet)
         self.netuid = 21
 
-    def prepare_synapse(self, cid: str) -> RetrieveUser:
+    def prepare_synapse(self, cid: str) -> Any:
+        if RetrieveUser is None:
+            raise RuntimeError(
+                "Storage subnet package not installed. Install from https://github.com/ifrit98/storage-subnet"
+            )
         synapse = RetrieveUser(data_hash=cid)
         return synapse
 
@@ -167,7 +187,7 @@ async def test_store_and_retrieve(
     store_handler = StoreUserAPI(wallet)
 
     # Fetch the axons you want to query
-    metagraph = bt.subtensor("test").metagraph(netuid=22)
+    metagraph = bt.subtensor("test").metagraph(netuid=netuid)
     query_axons = metagraph.axons
 
     cid = await store_handler(

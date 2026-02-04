@@ -2,6 +2,7 @@
 # Copyright © 2021 Yuma Rao
 # Copyright © 2023 Opentensor Foundation
 # Copyright © 2023 Opentensor Technologies Inc
+# Copyright © 2025 Pictensor
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
 # documentation files (the “Software”), to deal in the Software without restriction, including without limitation
@@ -16,19 +17,27 @@
 # THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 # OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
+
+from typing import List, Optional, Union
+
 import numpy as np
 import random
 import bittensor as bt
 
 
-async def ping_uids(dendrite, metagraph, uids, timeout=3):
+async def ping_uids(
+    dendrite: "bt.dendrite",
+    metagraph: "bt.metagraph",
+    uids: List[int],
+    timeout: float = 3,
+) -> tuple:
     """
     Pings a list of UIDs to check their availability on the Bittensor network.
 
     Args:
-        dendrite (bittensor.dendrite): The dendrite instance to use for pinging nodes.
-        metagraph (bittensor.metagraph): The metagraph instance containing network information.
-        uids (list): A list of UIDs (unique identifiers) to ping.
+        dendrite: The dendrite instance to use for pinging nodes.
+        metagraph: The metagraph instance containing network information.
+        uids: A list of UIDs (unique identifiers) to ping.
         timeout (int, optional): The timeout in seconds for each ping. Defaults to 3.
 
     Returns:
@@ -62,18 +71,23 @@ async def ping_uids(dendrite, metagraph, uids, timeout=3):
     bt.logging.debug(f"ping() failed uids    : {failed_uids}")
     return successful_uids, failed_uids
 
-async def get_query_api_nodes(dendrite, metagraph, n=0.1, timeout=3):
+async def get_query_api_nodes(
+    dendrite: "bt.dendrite",
+    metagraph: "bt.metagraph",
+    n: float = 0.1,
+    timeout: float = 3,
+) -> List[int]:
     """
     Fetches the available API nodes to query for the particular subnet.
 
     Args:
-        wallet (bittensor.wallet): The wallet instance to use for querying nodes.
-        metagraph (bittensor.metagraph): The metagraph instance containing network information.
-        n (float, optional): The fraction of top nodes to consider based on stake. Defaults to 0.1.
-        timeout (int, optional): The timeout in seconds for pinging nodes. Defaults to 3.
+        dendrite: The dendrite instance to use for pinging nodes.
+        metagraph: The metagraph instance containing network information.
+        n: The fraction of top nodes to consider based on stake. Defaults to 0.1.
+        timeout: The timeout in seconds for pinging nodes. Defaults to 3.
 
     Returns:
-        list: A list of UIDs representing the available API nodes.
+        A list of UIDs representing the available API nodes.
     """
     bt.logging.debug(
         f"Fetching available API nodes for subnet {metagraph.netuid}"
@@ -97,25 +111,29 @@ async def get_query_api_nodes(dendrite, metagraph, n=0.1, timeout=3):
 
 
 async def get_query_api_axons(
-    wallet, metagraph=None, n=0.1, timeout=3, uids=None
-):
+    wallet: "bt.wallet",
+    metagraph: Optional["bt.metagraph"] = None,
+    n: float = 0.1,
+    timeout: float = 3,
+    uids: Optional[Union[List[int], int]] = None,
+) -> list:
     """
     Retrieves the axons of query API nodes based on their availability and stake.
 
     Args:
-        wallet (bittensor.wallet): The wallet instance to use for querying nodes.
-        metagraph (bittensor.metagraph, optional): The metagraph instance containing network information.
-        n (float, optional): The fraction of top nodes to consider based on stake. Defaults to 0.1.
-        timeout (int, optional): The timeout in seconds for pinging nodes. Defaults to 3.
-        uids (Union[List[int], int], optional): The specific UID(s) of the API node(s) to query. Defaults to None.
+        wallet: The wallet instance to use for querying nodes.
+        metagraph: The metagraph instance containing network information. Uses template default netuid if None.
+        n: The fraction of top nodes to consider based on stake. Defaults to 0.1.
+        timeout: The timeout in seconds for pinging nodes. Defaults to 3.
+        uids: The specific UID(s) of the API node(s) to query. Defaults to None.
 
     Returns:
-        list: A list of axon objects for the available API nodes.
+        A list of axon objects for the available API nodes.
     """
     dendrite = bt.dendrite(wallet=wallet)
 
     if metagraph is None:
-        metagraph = bt.metagraph(netuid=21)
+        metagraph = bt.metagraph(netuid=1)  # Template default netuid
 
     if uids is not None:
         query_uids = [uids] if isinstance(uids, int) else uids
